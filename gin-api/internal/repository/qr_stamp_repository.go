@@ -206,6 +206,9 @@ func (r *QRStampRepository) Confirm(
 	default:
 		return service.StampConfirmation{}, domain.ErrQRTokenNotFound
 	}
+	if result.Card.StampCount >= result.Card.RequiredStamps {
+		return service.StampConfirmation{}, domain.ErrStampCardFull
+	}
 
 	if _, err := tx.ExecContext(ctx, `
 		UPDATE stamp_cards

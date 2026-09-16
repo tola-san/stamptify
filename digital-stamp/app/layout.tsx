@@ -10,7 +10,7 @@ const kantumruyPro = Kantumruy_Pro({
 });
 
 export const metadata: Metadata = {
-  title: "កាតត្រាឌីជីថល",
+  title: "digital-stamptify",
   description: "កាតសមាជិកឌីជីថលដ៏សាមញ្ញសម្រាប់អាជីវកម្មក្នុងស្រុក។",
 };
 

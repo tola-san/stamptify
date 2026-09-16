@@ -18,6 +18,7 @@ type qrStampApplicationStub struct {
 	preview         service.QRScanPreview
 	confirmation    service.StampConfirmation
 	previewErr      error
+	confirmErr      error
 	confirmedScanID string
 	confirmedStaff  string
 }
@@ -43,7 +44,7 @@ func (s *qrStampApplicationStub) Confirm(
 ) (service.StampConfirmation, error) {
 	s.confirmedScanID = scanID
 	s.confirmedStaff = staffID
-	return s.confirmation, nil
+	return s.confirmation, s.confirmErr
 }
 
 func newQRRouter(qr *qrStampApplicationStub) http.Handler {
@@ -101,5 +102,17 @@ func TestExpiredQRMapsToGone(t *testing.T) {
 
 	if response.Code != http.StatusGone || !strings.Contains(response.Body.String(), "QR_TOKEN_EXPIRED") {
 		t.Fatalf("unexpected expired response: %d %s", response.Code, response.Body.String())
+	}
+}
+
+func TestFullStampCardMapsToConflict(t *testing.T) {
+	qr := &qrStampApplicationStub{confirmErr: domain.ErrStampCardFull}
+	request := httptest.NewRequest(http.MethodPost, "/api/staff/stamp-scans/scan-1/confirm", nil)
+	request.AddCookie(&http.Cookie{Name: "staff_session", Value: "staff-cookie"})
+	response := httptest.NewRecorder()
+	newQRRouter(qr).ServeHTTP(response, request)
+
+	if response.Code != http.StatusConflict || !strings.Contains(response.Body.String(), "STAMP_CARD_FULL") {
+		t.Fatalf("unexpected full card response: %d %s", response.Code, response.Body.String())
 	}
 }

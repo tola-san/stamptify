@@ -80,6 +80,9 @@ func (s *QRStampService) Preview(ctx context.Context, rawToken string) (QRScanPr
 	if err := validateQRToken(preview.Status, preview.ExpiresAt, s.now().UTC()); err != nil {
 		return QRScanPreview{}, err
 	}
+	if preview.Card.StampCount >= preview.Card.RequiredStamps {
+		return QRScanPreview{}, domain.ErrStampCardFull
+	}
 	return preview, nil
 }
 
