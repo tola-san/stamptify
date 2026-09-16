@@ -18,4 +18,5 @@ var (
 	ErrQRTokenUsed         = errors.New("customer QR token has already been used")
 	ErrQRTokenCancelled    = errors.New("customer QR token has been cancelled")
 	ErrStampCardNotFound   = errors.New("stamp card not found")
+	ErrStampCardFull       = errors.New("stamp card has reached its required stamps")
 )

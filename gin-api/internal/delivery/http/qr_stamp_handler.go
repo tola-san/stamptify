@@ -96,6 +96,8 @@ func writeQRStampError(c *gin.Context, err error) {
 		writeError(c, http.StatusConflict, "QR_TOKEN_CANCELLED", err.Error())
 	case errors.Is(err, domain.ErrStampCardNotFound):
 		writeError(c, http.StatusUnprocessableEntity, "STAMP_CARD_NOT_FOUND", err.Error())
+	case errors.Is(err, domain.ErrStampCardFull):
+		writeError(c, http.StatusConflict, "STAMP_CARD_FULL", err.Error())
 	default:
 		_ = c.Error(err)
 		writeError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "an internal error occurred")

@@ -101,6 +101,25 @@ func TestPreviewRejectsExpiredAndUsedQR(t *testing.T) {
 	}
 }
 
+func TestPreviewRejectsFullStampCard(t *testing.T) {
+	fixedNow := time.Date(2026, time.September, 16, 10, 0, 0, 0, time.UTC)
+	store := &qrStampStoreStub{preview: QRScanPreview{
+		Status:    domain.QRStatusActive,
+		ExpiresAt: fixedNow.Add(time.Minute),
+		Card: domain.StampCard{
+			StampCount:     10,
+			RequiredStamps: 10,
+		},
+	}}
+	service := NewQRStampService(store)
+	service.now = func() time.Time { return fixedNow }
+
+	_, err := service.Preview(context.Background(), "raw-token")
+	if !errors.Is(err, domain.ErrStampCardFull) {
+		t.Fatalf("expected %v, got %v", domain.ErrStampCardFull, err)
+	}
+}
+
 func TestConfirmUsesAuthenticatedStaffAndScanID(t *testing.T) {
 	store := &qrStampStoreStub{confirmResult: StampConfirmation{RewardAvailable: true}}
 	service := NewQRStampService(store)
