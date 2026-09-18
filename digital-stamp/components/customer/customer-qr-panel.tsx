@@ -18,13 +18,17 @@ import { ApiError } from "@/lib/api";
 import {
   cancelCustomerQR,
   generateCustomerQR,
+  getCustomerCard,
 } from "@/services/customer-service";
 import type { GeneratedCustomerQR } from "@/types/customer";
+import type { StampCard } from "@/types/domain";
 
 const QR_LIFETIME_SECONDS = 60;
 
 type CustomerQRPanelProps = {
   customerName: string;
+  onStampReceived: (card: StampCard) => void;
+  stampCount: number;
 };
 
 function secondsUntil(expiresAt: string) {
@@ -34,7 +38,7 @@ function secondsUntil(expiresAt: string) {
   );
 }
 
-export function CustomerQRPanel({ customerName }: CustomerQRPanelProps) {
+export function CustomerQRPanel({ customerName, onStampReceived, stampCount }: CustomerQRPanelProps) {
   const router = useRouter();
   const [qr, setQR] = useState<GeneratedCustomerQR | null>(null);
   const [secondsRemaining, setSecondsRemaining] = useState(0);
@@ -56,6 +60,41 @@ export function CustomerQRPanel({ customerName }: CustomerQRPanelProps) {
 
     return () => window.clearInterval(timerID);
   }, [qr]);
+
+  useEffect(() => {
+    if (!qr) return;
+
+    let active = true;
+    let checking = false;
+
+    const checkForStamp = async () => {
+      if (checking || secondsUntil(qr.expires_at) === 0) return;
+      checking = true;
+
+      try {
+        const result = await getCustomerCard();
+        if (!active || result.card.stamp_count <= stampCount) return;
+
+        setQR(null);
+        setSecondsRemaining(0);
+        onStampReceived(result.card);
+      } catch (requestError) {
+        if (active && requestError instanceof ApiError && requestError.status === 401) {
+          router.replace("/login");
+        }
+      } finally {
+        checking = false;
+      }
+    };
+
+    void checkForStamp();
+    const pollID = window.setInterval(() => void checkForStamp(), 1200);
+
+    return () => {
+      active = false;
+      window.clearInterval(pollID);
+    };
+  }, [onStampReceived, qr, router, stampCount]);
 
   const isExpired = qr !== null && secondsRemaining === 0;
   const progress = useMemo(
