@@ -3,12 +3,10 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import confetti from "canvas-confetti";
 import {
   ArrowLeft, BadgeCheck, Camera, Check, CircleAlert, Gift, Keyboard,
   LoaderCircle, RefreshCw, ScanLine, Sparkles, UserRound,
 } from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
 import type { Html5Qrcode } from "html5-qrcode";
 
 import { Button } from "@/components/ui/button";
@@ -49,8 +47,6 @@ export function StaffQRScanner() {
   const [showManual, setShowManual] = useState(false);
   const [error, setError] = useState("");
   const [isConfirming, setIsConfirming] = useState(false);
-  const prefersReducedMotion = useReducedMotion();
-  const rewardReady = confirmation?.reward_available === true;
 
   useEffect(() => {
     let active = true;
@@ -114,25 +110,6 @@ export function StaffQRScanner() {
       if (scanner?.isScanning) void scanner.stop().then(() => scanner.clear()).catch(() => undefined);
     };
   }, [cameraKey, confirmation, isAuthenticated, preview]);
-
-  useEffect(() => {
-    if (!rewardReady || prefersReducedMotion) return;
-
-    const options = {
-      colors: ["#f59e0b", "#0ea5e9", "#10b981", "#6366f1"],
-      disableForReducedMotion: true,
-      origin: { y: 0.62 },
-      spread: 75,
-      startVelocity: 36,
-    };
-
-    void confetti({ ...options, particleCount: 70 });
-    const secondBurst = window.setTimeout(() => {
-      void confetti({ ...options, particleCount: 35, scalar: 0.8 });
-    }, 180);
-
-    return () => window.clearTimeout(secondBurst);
-  }, [prefersReducedMotion, rewardReady]);
 
   async function submitManual(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -205,19 +182,13 @@ export function StaffQRScanner() {
 
           {customer && card && <div className="p-6 sm:p-7">
             <div aria-live="polite" className="text-center">
-              <motion.div
-                animate={rewardReady ? { filter: "blur(0px)", opacity: 1, rotate: 0, scale: 1 } : undefined}
-                className={`relative mx-auto flex size-14 items-center justify-center rounded-2xl ${rewardReady ? "bg-amber-300 text-amber-950 shadow-[0_12px_32px_-12px_oklch(0.75_0.17_75/0.9)]" : confirmation ? "bg-emerald-100 text-emerald-700" : "bg-sky-100 text-sky-700"}`}
-                initial={rewardReady && !prefersReducedMotion ? { filter: "blur(4px)", opacity: 0, rotate: -8, scale: 0.25 } : false}
-                transition={{ type: "spring", duration: 0.3, bounce: 0 }}
-              >
-                {confirmation ? rewardReady ? <Gift className="size-7" strokeWidth={2} /> : <BadgeCheck className="size-7" /> : <UserRound className="size-6" />}
-              </motion.div>
-              <h1 className="mt-4 text-xl font-semibold">{rewardReady ? "រង្វាន់របស់អ្នករួចរាល់!" : confirmation ? "បានបន្ថែមត្រាជោគជ័យ" : "ពិនិត្យព័ត៌មានអតិថិជន"}</h1>
+              <span className={`mx-auto flex size-14 items-center justify-center rounded-2xl ${confirmation ? "bg-emerald-100 text-emerald-700" : "bg-sky-100 text-sky-700"}`}>
+                {confirmation ? <BadgeCheck className="size-7" /> : <UserRound className="size-6" />}
+              </span>
+              <h1 className="mt-4 text-xl font-semibold">{confirmation ? "បានបន្ថែមត្រាជោគជ័យ" : "ពិនិត្យព័ត៌មានអតិថិជន"}</h1>
               <p className="mt-1 text-sm text-slate-500">{customer.name} · {customer.phone}</p>
             </div>
-            {rewardReady && <motion.div animate={{ opacity: 1, y: 0 }} className="mt-6 rounded-2xl bg-amber-50 px-5 py-4 text-center ring-1 ring-inset ring-amber-600/15" initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }} role="status" transition={{ delay: 0.1, duration: 0.35, ease: "easeOut" }}><p className="flex items-center justify-center gap-2 font-semibold text-amber-950"><Sparkles aria-hidden="true" className="size-5 text-amber-600" />អបអរសាទរ!</p><p className="mt-1 text-sm leading-6 text-amber-900/75">អតិថិជនបានប្រមូលគ្រប់ {card.required_stamps} ត្រា ហើយអាចប្តូរយករង្វាន់បាន។</p></motion.div>}
-            <div className="mt-6 rounded-2xl bg-slate-50 p-5 ring-1 ring-slate-900/5"><div className="flex items-end justify-between"><div><p className="text-sm text-slate-500">ត្រាបច្ចុប្បន្ន</p><p className="mt-1 text-3xl font-semibold tabular-nums">{card.stamp_count}<span className="text-base text-slate-400"> / {card.required_stamps}</span></p></div><span className="text-sm font-semibold text-sky-700">{stampProgress(card)}%</span></div><div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-emerald-600 transition-[width] duration-500" style={{ width: `${stampProgress(card)}%` }} /></div><p className="mt-3 flex items-center gap-2 text-sm text-slate-500"><Sparkles className="size-4 text-amber-500" />{rewardReady ? "អាចប្តូរយករង្វាន់បានឥឡូវនេះ" : `នៅសល់ ${Math.max(0, card.required_stamps - card.stamp_count)} ត្រាទៀត`}</p></div>
+            <div className="mt-6 rounded-2xl bg-slate-50 p-5 ring-1 ring-slate-900/5"><div className="flex items-end justify-between"><div><p className="text-sm text-slate-500">ត្រាបច្ចុប្បន្ន</p><p className="mt-1 text-3xl font-semibold tabular-nums">{card.stamp_count}<span className="text-base text-slate-400"> / {card.required_stamps}</span></p></div><span className="text-sm font-semibold text-sky-700">{stampProgress(card)}%</span></div><div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-emerald-600 transition-[width] duration-500" style={{ width: `${stampProgress(card)}%` }} /></div><p className="mt-3 flex items-center gap-2 text-sm text-slate-500"><Sparkles className="size-4 text-amber-500" />នៅសល់ {Math.max(0, card.required_stamps - card.stamp_count)} ត្រាទៀត</p></div>
             {confirmation ? <button className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 font-semibold text-white transition-[background-color,transform] duration-150 hover:bg-slate-800 active:scale-[0.96]" onClick={scanAgain}><ScanLine className="size-5" />ស្កេនអតិថិជនបន្ទាប់</button> : <div className="mt-5 grid grid-cols-2 gap-3"><button className="h-12 rounded-xl border border-slate-200 font-semibold text-slate-700 transition-[background-color,transform] duration-150 hover:bg-slate-50 active:scale-[0.96]" onClick={scanAgain}>បោះបង់</button><Button className="h-12 rounded-xl bg-emerald-700 font-semibold text-white transition-[background-color,transform] duration-150 hover:bg-emerald-800 active:scale-[0.96]" disabled={isConfirming} onClick={() => void handleConfirm()}>{isConfirming ? <LoaderCircle className="animate-spin" /> : <Check />}បន្ថែម 1 ត្រា</Button></div>}
           </div>}
         </section>

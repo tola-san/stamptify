@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import confetti from "canvas-confetti";
 import {
   CircleAlert,
   Coffee,
@@ -11,7 +12,9 @@ import {
   LogOut,
   RefreshCw,
   Sparkles,
+  X,
 } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 import { Button } from "@/components/ui/button";
 import { CustomerQRPanel } from "@/components/customer/customer-qr-panel";
@@ -40,12 +43,106 @@ async function fetchCardData(): Promise<CardData> {
   };
 }
 
+function RewardCelebration({ onClose, requiredStamps }: { onClose: () => void; requiredStamps: number }) {
+  const prefersReducedMotion = useReducedMotion();
+
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    window.addEventListener("keydown", handleEscape);
+
+    if (!prefersReducedMotion) {
+      const options = {
+        colors: ["#f59e0b", "#0ea5e9", "#10b981", "#6366f1"],
+        disableForReducedMotion: true,
+        origin: { y: 0.62 },
+        spread: 75,
+        startVelocity: 36,
+      };
+
+      void confetti({ ...options, particleCount: 70 });
+      const secondBurst = window.setTimeout(() => {
+        void confetti({ ...options, particleCount: 35, scalar: 0.8 });
+      }, 180);
+
+      return () => {
+        window.removeEventListener("keydown", handleEscape);
+        window.clearTimeout(secondBurst);
+      };
+    }
+
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [onClose, prefersReducedMotion]);
+
+  return (
+    <motion.div
+      animate={{ opacity: 1 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm"
+      exit={{ opacity: 0 }}
+      initial={{ opacity: 0 }}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+      transition={{ duration: 0.15, ease: "easeOut" }}
+    >
+      <motion.section
+        aria-labelledby="reward-title"
+        aria-modal="true"
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="relative w-full max-w-sm rounded-[2rem] bg-white p-7 text-center shadow-[0_32px_90px_-24px_oklch(0.2_0.06_240/0.55)] ring-1 ring-black/10 sm:p-8"
+        exit={{ opacity: 0, scale: 0.98, y: 4 }}
+        initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.96, y: 8 }}
+        role="dialog"
+        transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+      >
+        <button
+          aria-label="បិទ"
+          className="absolute top-4 right-4 flex size-10 items-center justify-center rounded-xl text-zinc-500 outline-none transition-[background-color,color,transform] duration-150 hover:bg-zinc-100 hover:text-zinc-950 focus-visible:ring-4 focus-visible:ring-sky-600/15 active:scale-[0.96]"
+          onClick={onClose}
+          type="button"
+        >
+          <X aria-hidden="true" className="size-5" />
+        </button>
+
+        <motion.div
+          animate={{ filter: "blur(0px)", opacity: 1, rotate: 0, scale: 1 }}
+          className="mx-auto flex size-20 items-center justify-center rounded-3xl bg-amber-300 text-amber-950 shadow-[0_18px_38px_-16px_oklch(0.75_0.17_75/0.9)]"
+          initial={prefersReducedMotion ? false : { filter: "blur(4px)", opacity: 0, rotate: -8, scale: 0.25 }}
+          transition={{ type: "spring", duration: 0.3, bounce: 0, delay: 0.1 }}
+        >
+          <Gift aria-hidden="true" className="size-10" strokeWidth={2} />
+        </motion.div>
+
+        <p className="mt-6 text-sm font-semibold tracking-wide text-amber-700 uppercase">អបអរសាទរ!</p>
+        <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950" id="reward-title">
+          រង្វាន់របស់អ្នករួចរាល់ហើយ
+        </h2>
+        <p className="mt-3 text-sm leading-6 text-zinc-600">
+          អ្នកបានប្រមូលគ្រប់ {requiredStamps} ត្រា។ សូមបង្ហាញអេក្រង់នេះដល់បុគ្គលិក ដើម្បីប្តូរយករង្វាន់។
+        </p>
+
+        <Button
+          className="mt-7 h-12 w-full rounded-xl bg-sky-700 font-semibold text-white transition-[background-color,transform] duration-150 hover:bg-sky-800 active:scale-[0.96] active:translate-y-0"
+          onClick={onClose}
+          type="button"
+        >
+          <Sparkles aria-hidden="true" />
+          ទទួលបានរង្វាន់
+        </Button>
+      </motion.section>
+    </motion.div>
+  );
+}
+
 export function CustomerCardView() {
   const router = useRouter();
   const [data, setData] = useState<CardData | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showRewardCelebration, setShowRewardCelebration] = useState(false);
 
   useEffect(() => {
     let isActive = true;
@@ -119,6 +216,13 @@ export function CustomerCardView() {
           : "មិនអាចភ្ជាប់ទៅសេវាកម្មបានទេ។ សូមព្យាយាមម្តងទៀត។",
       );
       setIsLoggingOut(false);
+    }
+  }
+
+  function handleStampReceived(card: StampCard) {
+    setData((current) => current ? { ...current, card } : current);
+    if (card.stamp_count >= Math.max(card.required_stamps, 1)) {
+      setShowRewardCelebration(true);
     }
   }
 
@@ -319,7 +423,11 @@ export function CustomerCardView() {
             </div>
           </div>
 
-          <CustomerQRPanel customerName={customer.name} />
+          <CustomerQRPanel
+            customerName={customer.name}
+            onStampReceived={handleStampReceived}
+            stampCount={card.stamp_count}
+          />
 
           {error && (
             <div
@@ -333,6 +441,14 @@ export function CustomerCardView() {
           )}
         </section>
       </div>
+      <AnimatePresence initial={false}>
+        {showRewardCelebration && (
+          <RewardCelebration
+            onClose={() => setShowRewardCelebration(false)}
+            requiredStamps={requiredStamps}
+          />
+        )}
+      </AnimatePresence>
     </main>
   );
 }
